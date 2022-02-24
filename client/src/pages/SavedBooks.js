@@ -1,51 +1,35 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Jumbotron, Container, CardColumns, Card, Button } from 'react-bootstrap';
 
-import { useQuery, useMutation } from "@apollo/client";
-import { GET_ME } from "../utils/queries";
-import { REMOVE_BOOK } from "../utils/mutation";
-import Auth from '../utils/auth';
+import { DELETE_BOOK } from '../utils/mutations';
 import { removeBookId } from '../utils/localStorage';
 
+import { useQuery, useMutation } from '@apollo/react-hooks';
+import { GET_ME } from '../utils/queries';
+
 const SavedBooks = () => {
+
   const { loading, data } = useQuery(GET_ME);
-  const [deleteBook] = useMutation(REMOVE_BOOK);
+  console.log(data)
+  const [deleteBook, {error}] = useMutation(DELETE_BOOK);
+
   const userData = data?.me || {};
+  console.log(userData)
 
-  if(!userData?.username) {
-    return (
-      <h4>
-        Must be logged in to see page! Use Sign Up in navigation bar to continue.
-      </h4>
-    );
-  }
-
-   
-   const handleDeleteBook = async (bookId) => {
-    const token = Auth.loggedIn() ? Auth.getToken() : null;
-
-    if (!token) {
-      return false;
-    }
-
+  // create function that accepts the book's mongo _id value as param and deletes the book from the database
+  const handleDeleteBook = async (bookId) => {
     try {
       await deleteBook({
-        variables: {bookId: bookId},
-        update: cache => {
-          const data = cache.readQuery({ query: GET_ME });
-          const userDataCache = data.me;
-          const savedBooksCache = userDataCache.savedBooks;
-          const updatedBookCache = savedBooksCache.filter((book) => book.bookId !== bookId);
-          data.me.savedBooks = updatedBookCache;
-          cache.writeQuery({ query: GET_ME , data: {data: {...data.me.savedBooks}}})
-        }
-      });
+        variables: {bookId},
+        refetchQueries: [{ query: GET_ME }]
+      })
       // upon success, remove book's id from localStorage
       removeBookId(bookId);
     } catch (err) {
       console.error(err);
     }
   };
+
   // if data isn't here yet, say so
   if (loading) {
     return <h2>LOADING...</h2>;
@@ -59,7 +43,7 @@ const SavedBooks = () => {
         </Container>
       </Jumbotron>
       <Container>
-        <h2>
+        <h2 key={userData.savedBooks.length}>
           {userData.savedBooks.length
             ? `Viewing ${userData.savedBooks.length} saved ${userData.savedBooks.length === 1 ? 'book' : 'books'}:`
             : 'You have no saved books!'}
@@ -72,10 +56,9 @@ const SavedBooks = () => {
                 <Card.Body>
                   <Card.Title>{book.title}</Card.Title>
                   <p className='small'>Authors: {book.authors}</p>
-                  {book.link ? <Card.Text><a href={book.link} target="_blank">More Information on Google Books</a></Card.Text> : null}
                   <Card.Text>{book.description}</Card.Text>
                   <Button className='btn-block btn-danger' onClick={() => handleDeleteBook(book.bookId)}>
-                    Delete this Book
+                    Delete this Book!
                   </Button>
                 </Card.Body>
               </Card>
@@ -85,6 +68,6 @@ const SavedBooks = () => {
       </Container>
     </>
   );
-};
+}
 
 export default SavedBooks;

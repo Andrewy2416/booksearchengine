@@ -1,28 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Form, Button, Alert } from 'react-bootstrap';
 
-import { useMutation } from "@apollo/client";
-//import { createUser } from '../utils/API';
+import { useMutation } from '@apollo/react-hooks';
+import { ADD_USER } from '../utils/mutations';
 import Auth from '../utils/auth';
-import { ADD_USER } from '../utils/mutation';
 
 const SignupForm = () => {
   // set initial form state
   const [userFormData, setUserFormData] = useState({ username: '', email: '', password: '' });
-
-  const [createUser, { error }] = useMutation(ADD_USER);
   // set state for form validation
   const [validated] = useState(false);
   // set state for alert
   const [showAlert, setShowAlert] = useState(false);
-
-  useEffect(() => {
-if ( error ) {
-  setShowAlert(true);
-} else{ 
-  setShowAlert(false);
-}
-  }, [ error ] )
+  const [addUser, {error}] = useMutation(ADD_USER);
 
   const handleInputChange = (event) => {
     const { name, value } = event.target;
@@ -30,6 +20,7 @@ if ( error ) {
   };
 
   const handleFormSubmit = async (event) => {
+
     event.preventDefault();
 
     // check if form has everything (as per react-bootstrap docs)
@@ -38,19 +29,20 @@ if ( error ) {
       event.preventDefault();
       event.stopPropagation();
     }
-
     try {
-      const { data } = await createUser({
-        variables: {
-          ...userFormData
-        }
+      const {data} = await addUser({
+        variables: {...userFormData}
       });
 
+      // if (!response.ok) {
+      //   throw new Error('something went wrong!');
+      // }
+
       
-      console.log( data );
       Auth.login(data.addUser.token);
     } catch (err) {
       console.error(err);
+      setShowAlert(true);
     }
 
     setUserFormData({
@@ -119,3 +111,4 @@ if ( error ) {
 };
 
 export default SignupForm;
+
